@@ -1,4 +1,4 @@
-
+cmake_minimum_required(VERSION 3.5)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -7,30 +7,16 @@ endif()
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb")
 SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
 
-PROJECT(ncnn_nvm_main)
-set(Target ncnn_nvm_main)
-
-cmake_minimum_required(VERSION 3.5)
-
-
-if(TARGET_COMPILER STREQUAL "arm")
-    message(STATUS "TARGET_COMPILE STREQUAL arm")
-    SET(CMAKE_CXX_COMPILER arm-none-linux-gnueabihf-g++)
-    SET(CMAKE_C_COMPILER arm-none-linux-gnueabihf-gcc)
-    SET(NCNN_INSTALL_DIR /opt/external/ncnn/install/arm/)
-    SET(OpenCV_DIR /opt/external/opencv/install/arm/lib/cmake/opencv4/)
-else()
-    message(STATUS "TARGET_COMPILE STREQUAL X64")
-    SET(NCNN_INSTALL_DIR /opt/external/ncnn/install/x64/)
-    SET(OpenCV_DIR /opt/external/opencv/install/x64/lib/cmake/opencv4/)
-endif()
-
+PROJECT(ncnn_rvm_main)
+set(Target ncnn_rvm_main)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
-
+SET(NCNN_INSTALL_DIR $ENV{NCNN_INSTALL_DIR})
+SET(OpenCV_DIR $ENV{OpenCV_DIR})
 
 find_package(OpenCV REQUIRED)
+find_package(ncnn REQUIRED)
 
 include_directories(${OpenCV_INCLUDE_DIRS} )
 include_directories(${PROJECT_SOURCE_DIR}/include)
@@ -40,9 +26,5 @@ add_executable(${Target} ${Target}.cpp)
 link_directories(${OpenCV_LIBRARY_DIRS})
 
 target_link_libraries(${Target} ${OpenCV_LIBRARIES})
-target_link_libraries (${Target} ${NCNN_INSTALL_DIR}/lib/libncnn.a -fopenmp)
-
-
-
-
+target_link_libraries (${Target} ${NCNN_INSTALL_DIR}/lib/libncnn.so -fopenmp)
 
