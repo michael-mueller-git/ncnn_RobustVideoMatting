@@ -21,6 +21,7 @@
         pkgs.vulkan-headers
         pkgs.vulkan-loader
         pkgs.vulkan-tools
+        pkgs.ffmpeg_6-full
         pkgs.vulkan-validation-layers
         (pkgs.python311.withPackages (p: with p; [
           torchvision

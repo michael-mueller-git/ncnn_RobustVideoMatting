@@ -18,11 +18,12 @@ static void draw_objects(const cv::Mat &bgr, const cv::Mat &fgr, const cv::Mat &
             comp.at<cv::Vec3b>(i, j)[2] = fgr.at<cv::Vec3b>(i, j)[2] * alpha + (1 - alpha) * 120;
         }
     }
-
+#if 0
     cv::imshow("pha", pha);   // alphaチャンネル
     cv::imshow("fgr", fgr);   // 合成前の画像
     cv::imshow("comp", comp); // 合成画像
-    const int key = cv::waitKey(10);
+    const int key = cv::waitKey(1);
+#endif
 }
 
 static int detect_rvm(ncnn::Net &net, const cv::Mat &bgr, cv::Mat &pha, cv::Mat &fgr) {
@@ -86,15 +87,51 @@ int main(int argc, char **argv) {
     net.load_param("rvm_ts.ncnn.param");
     net.load_model("rvm_ts.ncnn.bin");
 
+    double scale = 0.25;
+
+    cv::Size frame_size(round(scale * cap.get(cv::CAP_PROP_FRAME_WIDTH)), round(scale * cap.get(cv::CAP_PROP_FRAME_HEIGHT))); 
+
+    std::cout << frame_size << std::endl;
+
+    cv::VideoWriter out("output.mp4", cv::CAP_FFMPEG, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), cap.get(cv::CAP_PROP_FPS), frame_size, false);
+
+    int i = 0;
     while(cap.isOpened()) {
-        cv::Mat frame;
+        i++;
+        std::cout << i << std::endl;
+        cv::Mat frame, resized_frame;
 
         cap >> frame;
 
+        if (frame.empty())
+            break;
+
+        cv::resize(frame, resized_frame, cv::Size(), scale, scale, cv::INTER_AREA);
+
+        std::cout << resized_frame.size() << std::endl;
+
         cv::Mat fgr, pha, comp;
-        detect_rvm(net, frame, fgr, pha);
-        draw_objects(frame, fgr, pha, comp); // 后处理
+        detect_rvm(net, resized_frame, fgr, pha);
+        //draw_objects(frame, fgr, pha, comp); // 后处理
+
+     cv::resize(resized_frame, comp, pha.size(), 0, 0, 1);
+    for(int i = 0; i < pha.rows; i++) {
+        for(int j = 0; j < pha.cols; j++) {
+            uchar data = pha.at<uchar>(i, j);
+            float alpha = (float)data / 255;
+            comp.at<cv::Vec3b>(i, j)[0] = fgr.at<cv::Vec3b>(i, j)[0] * alpha + (1 - alpha) * 255;
+            comp.at<cv::Vec3b>(i, j)[1] = fgr.at<cv::Vec3b>(i, j)[1] * alpha + (1 - alpha) * 155;
+            comp.at<cv::Vec3b>(i, j)[2] = fgr.at<cv::Vec3b>(i, j)[2] * alpha + (1 - alpha) * 120;
+        }
     }
+
+        out.write(fgr);
+        cv::imshow("x", fgr);
+        const int key = cv::waitKey(1);
+
+    }
+    out.release();
+    cap.release();
 
     return 0;
 }
