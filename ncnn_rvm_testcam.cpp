@@ -65,27 +65,29 @@ static int detect_rvm(ncnn::Net &net, const cv::Mat &bgr, cv::Mat &pha, cv::Mat 
 }
 
 int main(int argc, char **argv) {
-
-    cv::VideoCapture cap("/dev/video2");
+    if(argc != 2) {
+        std::cout << "Usage: " << argv[0] << " video_file" << std::endl;
+        return -1;
+    }
+    std::string videopath = argv[1];
+    cv::VideoCapture cap(videopath);
 
     if(!cap.isOpened()) {
         std::cout << "Cannot open cam" << std::endl;
         return -1;
     }
 
-    cap.set(cv::CAP_PROP_FOURCC, cv::CAP_OPENCV_MJPEG);
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+    //cap.set(cv::CAP_PROP_FOURCC, cv::CAP_OPENCV_MJPEG);
+    //cap.set(cv::CAP_PROP_FRAME_WIDTH, 480*2);
+    //cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
 
     ncnn::Net net;
     net.opt.use_vulkan_compute = true;
-    // original pretrained model from https://github.com/PeterL1n/RobustVideoMatting
-    net.load_param("ts.ncnn.param");
-    net.load_model("ts.ncnn.bin");
+    net.load_param("rvm_ts.ncnn.param");
+    net.load_model("rvm_ts.ncnn.bin");
 
     while(cap.isOpened()) {
-        cv::Mat frame, comp;
-        cv::Mat fgr, pha;
+        cv::Mat frame;
 
         cap >> frame;
 
