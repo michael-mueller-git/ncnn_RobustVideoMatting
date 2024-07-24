@@ -45,6 +45,11 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    std::string dest = videopath ;
+    if (dest.size() >= 4) {
+        dest.erase(dest.size() - 4);
+    }
+
     const int frame_count = cap.get(cv::CAP_PROP_FRAME_COUNT);
 
     ncnn::Net left_net;
@@ -59,21 +64,22 @@ int main(int argc, char **argv) {
 
     double scale = 0.25;
 
-    cv::Size frame_size(round(scale * cap.get(cv::CAP_PROP_FRAME_WIDTH)), round(scale * cap.get(cv::CAP_PROP_FRAME_HEIGHT))); 
+    cv::Size frame_size(cap.get(cv::CAP_PROP_FRAME_WIDTH), cap.get(cv::CAP_PROP_FRAME_HEIGHT)); 
 
     std::cout << frame_size << std::endl;
 
-    cv::VideoWriter out(videopath + "-alpha.mp4", cv::CAP_FFMPEG, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), cap.get(cv::CAP_PROP_FPS), frame_size, false);
+    cv::VideoWriter out(dest + "-alpha.mp4", cv::CAP_FFMPEG, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), cap.get(cv::CAP_PROP_FPS), frame_size, false);
 
     int i = 0;
     while(cap.isOpened()) {
         std::cout << i++ << "/" << frame_count << std::endl;
         cv::Mat frame, resized_frame;
-
         cap >> frame;
 
         if (frame.empty())
             break;
+
+        auto target_size = frame.size();
 
         cv::resize(frame, resized_frame, cv::Size(), scale, scale, cv::INTER_AREA);
 
@@ -82,8 +88,6 @@ int main(int argc, char **argv) {
 
         cv::Mat right_frame;
         resized_frame(cv::Rect(resized_frame.cols/2, 0, resized_frame.cols/2, resized_frame.rows)).copyTo(right_frame);
-
-        // std::cout << resized_frame.size() << std::endl;
 
         cv::Mat left_fgr, right_fgr;
 
@@ -96,10 +100,26 @@ int main(int argc, char **argv) {
 
         cv::hconcat(alpha_stack, alpha);
 
-        out.write(alpha);
+        cv::Mat alpha_final;
+        cv::resize(alpha, alpha_final, target_size);
+
+        out.write(alpha_final);
     }
     out.release();
     cap.release();
+
+
+    std::string cmd = R"(ffmpeg -i ")";
+    cmd += videopath ;
+    cmd += "\" -i \"";
+    cmd += dest + "-alpha.mp4";
+    cmd += R"(" -i "mask.png" -filter_complex "[1]scale=iw*0.4:-1[alpha];[2][alpha]scale2ref[mask][alpha];[alpha][mask]alphamerge,split=2[masked_alpha1][masked_alpha2]; [masked_alpha1]crop=iw/2:ih:0:0,split=2[masked_alpha_l1][masked_alpha_l2]; [masked_alpha2]crop=iw/2:ih:iw/2:0,split=4[masked_alpha_r1][masked_alpha_r2][masked_alpha_r3][masked_alpha_r4]; [0][masked_alpha_l1]overlay=W*0.5-w*0.5:-0.5*h[out_lt];[out_lt][masked_alpha_l2]overlay=W*0.5-w*0.5:H-0.5*h[out_tb]; [out_tb][masked_alpha_r1]overlay=0-w*0.5:-0.5*h[out_l_lt];[out_l_lt][masked_alpha_r2]overlay=0-w*0.5:H-0.5*h[out_tb_ltb]; [out_tb_ltb][masked_alpha_r3]overlay=W-w*0.5:-0.5*h[out_r_lt];[out_r_lt][masked_alpha_r4]overlay=W-w*0.5:H-0.5*h" -c:v libx265 -crf 17 -preset veryfast ")";
+    cmd += dest + "-result.mp4";
+    cmd += "\" -y";
+
+    std::cout << "cmd: " << cmd << std::endl;
+
+    system(cmd.c_str());
 
     return 0;
 }
