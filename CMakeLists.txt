@@ -7,8 +7,8 @@ endif()
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb")
 SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
 
-PROJECT(ncnn_rvm_main)
-set(Target ncnn_rvm_testcam)
+PROJECT(vr-alpha)
+set(Target vr-alpha)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
