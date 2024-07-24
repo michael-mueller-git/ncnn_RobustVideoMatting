@@ -5,7 +5,6 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
 
-/*
 static int detect_rvm(ncnn::Net &net, const cv::Mat &bgr, cv::Mat &pha) {
 const int target_width = 512;
     const int target_height = target_width;
@@ -31,46 +30,7 @@ const int target_width = 512;
 
     return 0;
 }
-*/
 
-static int detect_rvm(ncnn::Net &net, const cv::Mat &bgr, cv::Mat &pha, cv::Mat &fgr) {
-    const int target_width = 512;
-    const int target_height = target_width;
-
-    ncnn::Extractor ex = net.create_extractor();
-    const float mean_vals[3] = {0, 0, 0};
-    const float norm_vals[3] = {1 / 255.0, 1 / 255.0, 1 / 255.0};
-    ncnn::Mat ncnn_in1 = ncnn::Mat::from_pixels_resize(bgr.data, ncnn::Mat::PIXEL_BGR2RGB, bgr.cols, bgr.rows, target_width, target_height);
-
-    ncnn_in1.substract_mean_normalize(mean_vals, norm_vals);
-    ex.input("in0", ncnn_in1);
-    ncnn::Mat pha_;
-    ncnn::Mat fgr_;
-    ex.extract("out0", fgr_);
-    ex.extract("out1", pha_);
-
-    cv::Mat cv_pha = cv::Mat(pha_.h, pha_.w, CV_32FC1, (float *)pha_.data);
-    cv::Mat cv_fgr = cv::Mat(fgr_.h, fgr_.w, CV_32FC3);
-    ncnn::Mat fgr_pack3;
-    ncnn::convert_packing(fgr_, fgr_pack3, 3);
-    memcpy((uchar *)cv_fgr.data, fgr_pack3.data, 512 * 512 * 3 * sizeof(float));
-
-    resize(cv_pha, cv_pha, cv::Size(bgr.cols, bgr.rows), cv::INTER_LINEAR);
-    resize(cv_fgr, cv_fgr, cv::Size(bgr.cols, bgr.rows), cv::INTER_LINEAR);
-
-    cv::Mat fgr8U;
-    cv_fgr.convertTo(fgr8U, CV_8UC3, 255.0, 0);
-
-    cv::Mat pha8U;
-    cv_pha.convertTo(pha8U, CV_8UC1, 255.0, 0);
-
-    cv::cvtColor(fgr8U, fgr8U, cv::COLOR_BGR2RGB);
-
-    pha8U.copyTo(pha);
-    fgr8U.copyTo(fgr);
-
-    return 0;
-}
 
 int main(int argc, char **argv) {
     if(argc != 2) {
@@ -125,11 +85,10 @@ int main(int argc, char **argv) {
 
         // std::cout << resized_frame.size() << std::endl;
 
-        cv::Mat left_pha, right_pha;
         cv::Mat left_fgr, right_fgr;
 
-        detect_rvm(left_net, left_frame, left_fgr, left_pha);
-        detect_rvm(left_net, right_frame, right_fgr, right_pha);
+        detect_rvm(left_net, left_frame, left_fgr);
+        detect_rvm(left_net, right_frame, right_fgr);
 
         std::vector<cv::Mat> alpha_stack = {left_fgr, right_fgr};
 
